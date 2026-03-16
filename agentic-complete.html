@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGENTIC — AI Agents That Never Sleep</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Fraunces:ital,wght@0,100..900;1,100..900&family=Syne:wght@400;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* Light palette (hero / use-cases / how-it-works) */
+  --ink: #0a0a08;
+  --paper: #f5f0e8;
+  --acid: #c8f500;
+  --rust: #e05a1c;
+  --ash: #a8a49c;
+  --grid: rgba(0,0,0,0.06);
+  /* Dark palette (new sections) */
+  --bg: #0e0e0e;
+  --surface: #161616;
+  --border-dark: rgba(255,255,255,0.08);
+  --text-dark: #f0ede6;
+  --muted-dark: rgba(240,237,230,0.38);
+  --lime: #d4f54e;
+  --coral: #ff5f3f;
+  --sky: #7eb8f7;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'DM Mono', monospace;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ── CURSOR ── */
+.cursor {
+  position: fixed; width: 12px; height: 12px;
+  background: var(--rust); border-radius: 50%;
+  pointer-events: none; z-index: 9999;
+  transition: transform 0.1s ease; mix-blend-mode: multiply;
+}
+.cursor-ring {
+  position: fixed; width: 36px; height: 36px;
+  border: 1.5px solid var(--ink); border-radius: 50%;
+  pointer-events: none; z-index: 9998;
+  transition: all 0.18s ease; mix-blend-mode: multiply;
+}
+
+/* ── GRID BG ── */
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 48px 48px; pointer-events: none; z-index: 0;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px 48px; mix-blend-mode: multiply;
+}
+.nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.15em; color: var(--ink); text-decoration: none; }
+.nav-links { display: flex; gap: 32px; list-style: none; }
+.nav-links a { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink); text-decoration: none; opacity: 0.5; transition: opacity 0.2s; }
+.nav-links a:hover { opacity: 1; }
+
+/* ── HERO ── */
+.hero {
+  position: relative; z-index: 1; min-height: 100vh;
+  display: grid; grid-template-columns: 1fr 1fr; padding-top: 80px;
+}
+.hero-left {
+  padding: 80px 48px; display: flex; flex-direction: column;
+  justify-content: center; border-right: 1px solid var(--ink);
+}
+.hero-eyebrow {
+  font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--ash); margin-bottom: 32px; display: flex; align-items: center; gap: 12px;
+}
+.hero-eyebrow::before { content: ''; display: block; width: 32px; height: 1px; background: var(--ash); }
+.hero-headline { font-family: 'Bebas Neue', sans-serif; font-size: clamp(72px, 8vw, 120px); line-height: 0.92; letter-spacing: 0.02em; margin-bottom: 40px; }
+.hero-headline em { font-style: italic; font-family: 'Fraunces', serif; color: var(--rust); }
+.hero-sub { font-size: 13px; line-height: 1.8; color: #555; max-width: 380px; margin-bottom: 48px; }
+.hero-cta { display: flex; gap: 16px; align-items: center; }
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--ink); color: var(--paper); padding: 16px 32px;
+  font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.12em;
+  text-transform: uppercase; text-decoration: none; transition: all 0.2s; border: 1.5px solid var(--ink);
+}
+.btn-primary:hover { background: var(--acid); color: var(--ink); }
+.btn-ghost { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); text-decoration: none; opacity: 0.5; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s; }
+.btn-ghost:hover { opacity: 1; }
+.hero-right { padding: 80px 48px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.agent-visual { position: relative; width: 340px; height: 340px; }
+.agent-ring { position: absolute; border-radius: 50%; border: 1px solid rgba(0,0,0,0.15); animation: spin linear infinite; }
+.agent-ring:nth-child(1) { inset: 0; animation-duration: 20s; }
+.agent-ring:nth-child(2) { inset: 30px; animation-duration: 15s; animation-direction: reverse; }
+.agent-ring:nth-child(3) { inset: 60px; animation-duration: 10s; }
+.agent-ring::after { content: ''; position: absolute; width: 8px; height: 8px; background: var(--rust); border-radius: 50%; top: -4px; left: 50%; transform: translateX(-50%); }
+.agent-core { position: absolute; inset: 90px; background: var(--ink); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px; }
+.agent-pulse { width: 6px; height: 6px; background: var(--acid); border-radius: 50%; animation: pulse 1.4s ease-in-out infinite; }
+.agent-core-label { font-family: 'Bebas Neue', sans-serif; font-size: 11px; color: var(--paper); letter-spacing: 0.2em; opacity: 0.7; }
+.agent-tag { position: absolute; background: var(--paper); border: 1px solid var(--ink); padding: 6px 12px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; animation: float 4s ease-in-out infinite; }
+.agent-tag:nth-child(5) { top: 0; left: -60px; animation-delay: 0s; }
+.agent-tag:nth-child(6) { top: 60px; right: -80px; animation-delay: 0.8s; }
+.agent-tag:nth-child(7) { bottom: 60px; left: -80px; animation-delay: 1.6s; }
+.agent-tag:nth-child(8) { bottom: 0; right: -50px; animation-delay: 2.4s; }
+.uptime-badge { position: absolute; top: 24px; right: 24px; background: var(--acid); color: var(--ink); padding: 8px 16px; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+.uptime-dot { width: 6px; height: 6px; background: var(--ink); border-radius: 50%; animation: pulse 1s ease-in-out infinite; }
+
+/* ── TICKER ── */
+.ticker { position: relative; z-index: 1; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background: var(--ink); color: var(--paper); padding: 14px 0; overflow: hidden; white-space: nowrap; }
+.ticker-track { display: inline-flex; animation: ticker 30s linear infinite; }
+.ticker-item { display: inline-flex; align-items: center; gap: 24px; padding: 0 32px; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
+.ticker-sep { opacity: 0.3; }
+
+/* ── STATS ── */
+.stats-section { position: relative; z-index: 1; padding: 80px 48px; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); display: grid; grid-template-columns: repeat(4, 1fr); }
+.stat { padding: 40px; border-right: 1px solid var(--ink); }
+.stat:last-child { border-right: none; }
+.stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 64px; line-height: 1; margin-bottom: 8px; }
+.stat-num span { color: var(--rust); }
+.stat-label { font-size: 11px; letter-spacing: 0.1em; color: var(--ash); text-transform: uppercase; }
+
+/* ── USE CASES ── */
+.section { position: relative; z-index: 1; padding: 120px 48px; }
+.section-label { font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ash); margin-bottom: 64px; display: flex; align-items: center; gap: 16px; }
+.section-label span { display: block; width: 48px; height: 1px; background: var(--ash); }
+.use-cases-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--ink); }
+.use-case { padding: 48px; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); position: relative; overflow: hidden; transition: background 0.3s; }
+.use-case:nth-child(3n) { border-right: none; }
+.use-case:nth-last-child(-n+3) { border-bottom: none; }
+.use-case::before { content: ''; position: absolute; inset: 0; background: var(--ink); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.use-case:hover::before { transform: translateY(0); }
+.use-case:hover .uc-number, .use-case:hover .uc-title, .use-case:hover .uc-desc, .use-case:hover .uc-arrow { color: var(--paper); }
+.uc-number { font-family: 'Bebas Neue', sans-serif; font-size: 48px; opacity: 0.12; line-height: 1; margin-bottom: 24px; position: relative; transition: color 0.3s; }
+.uc-icon { font-size: 28px; margin-bottom: 20px; position: relative; }
+.uc-title { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; line-height: 1.2; margin-bottom: 16px; position: relative; transition: color 0.3s; }
+.uc-desc { font-size: 12px; line-height: 1.8; color: #666; position: relative; transition: color 0.3s; }
+.uc-arrow { position: relative; margin-top: 24px; display: block; transition: color 0.3s; opacity: 0.4; font-size: 20px; }
+
+/* ── HOW IT WORKS ── */
+.how-section { position: relative; z-index: 1; padding: 120px 48px; background: var(--ink); color: var(--paper); }
+.how-section .section-label { color: rgba(255,255,255,0.3); }
+.how-section .section-label span { background: rgba(255,255,255,0.2); }
+.how-headline { font-family: 'Bebas Neue', sans-serif; font-size: clamp(52px, 6vw, 80px); line-height: 0.95; margin-bottom: 80px; letter-spacing: 0.02em; }
+.how-headline em { font-family: 'Fraunces', serif; font-style: italic; color: var(--acid); }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid rgba(255,255,255,0.1); }
+.step { padding: 48px 32px 48px 0; border-right: 1px solid rgba(255,255,255,0.1); }
+.step:last-child { border-right: none; padding-right: 0; }
+.step:not(:first-child) { padding-left: 32px; }
+.step-num { font-family: 'Bebas Neue', sans-serif; font-size: 56px; color: var(--acid); line-height: 1; margin-bottom: 24px; }
+.step-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; margin-bottom: 12px; }
+.step-desc { font-size: 12px; line-height: 1.8; color: rgba(255,255,255,0.45); }
+
+/* ════════════════════════════════════
+   NEW DARK SECTIONS
+════════════════════════════════════ */
+.dark-section {
+  background: var(--bg);
+  color: var(--text-dark);
+  font-family: 'JetBrains Mono', monospace;
+  padding: 120px 60px;
+  border-bottom: 1px solid var(--border-dark);
+  position: relative;
+  z-index: 1;
+}
+
+.tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--muted-dark); margin-bottom: 56px;
+}
+.tag-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--lime); animation: blink 2s ease-in-out infinite; }
+
+/* ── TESTIMONIALS ── */
+.testimonials-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 64px; }
+.testimonials-title { font-family: 'Syne', sans-serif; font-size: clamp(44px, 5.5vw, 72px); font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.testimonials-title em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--lime); }
+.testimonials-count { font-size: 11px; color: var(--muted-dark); text-align: right; line-height: 1.6; }
+
+.testi-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; grid-template-rows: auto auto; gap: 1px; background: var(--border-dark); }
+.testi-card { background: var(--surface); padding: 40px; position: relative; overflow: hidden; transition: background 0.3s; display: flex; flex-direction: column; }
+.testi-card:hover { background: #1d1d1d; }
+.testi-card.featured { grid-row: span 2; background: var(--lime); color: #0e0e0e; }
+.testi-card.featured:hover { background: #c9ee3a; }
+.testi-card.featured .testi-text { color: #111; font-size: 20px; }
+.testi-card.featured .testi-author { color: #333; }
+.testi-card.featured .testi-role { color: rgba(0,0,0,0.5); }
+.testi-card.featured .testi-metric { color: #0e0e0e; background: rgba(0,0,0,0.12); }
+.testi-card.featured .quote-mark { color: rgba(0,0,0,0.15); }
+.quote-mark { font-family: 'Instrument Serif', serif; font-size: 80px; line-height: 0.6; color: rgba(255,255,255,0.06); margin-bottom: 16px; display: block; }
+.testi-text { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 16px; line-height: 1.65; color: var(--text-dark); margin-bottom: 28px; flex: 1; }
+.testi-metric { display: inline-block; background: rgba(255,255,255,0.06); padding: 6px 14px; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 28px; color: var(--lime); }
+.testi-bottom { display: flex; align-items: center; gap: 14px; margin-top: auto; }
+.testi-avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; font-family: 'Syne', sans-serif; flex-shrink: 0; }
+.testi-author { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text-dark); }
+.testi-role { font-size: 11px; color: var(--muted-dark); }
+.testi-stars { position: absolute; top: 24px; right: 24px; color: var(--lime); font-size: 11px; letter-spacing: 2px; }
+
+/* ── DEMO ── */
+.demo-wrapper { display: grid; grid-template-columns: 1fr 1.2fr; gap: 60px; align-items: start; }
+.demo-controls h2 { font-family: 'Syne', sans-serif; font-size: clamp(36px, 4vw, 54px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 16px; }
+.demo-controls h2 em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--sky); }
+.demo-controls p { font-size: 13px; color: var(--muted-dark); margin-bottom: 36px; line-height: 1.8; }
+.agent-selector { display: flex; flex-direction: column; gap: 2px; margin-bottom: 28px; }
+.agent-btn { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: transparent; border: 1px solid transparent; color: var(--muted-dark); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; text-align: left; transition: all 0.2s; border-radius: 4px; }
+.agent-btn:hover { background: rgba(255,255,255,0.04); color: var(--text-dark); }
+.agent-btn.active { background: rgba(126,184,247,0.1); border-color: rgba(126,184,247,0.3); color: var(--sky); }
+.agent-btn-icon { font-size: 18px; }
+.agent-btn-label { font-weight: 500; }
+.agent-btn-desc { font-size: 10px; color: var(--muted-dark); display: block; margin-top: 1px; }
+.demo-run-btn { width: 100%; padding: 16px; background: var(--sky); color: #0e0e0e; border: none; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.demo-run-btn:hover { background: #a8cff8; }
+.demo-run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.demo-window { background: #0a0a0a; border: 1px solid var(--border-dark); border-radius: 8px; overflow: hidden; min-height: 500px; display: flex; flex-direction: column; }
+.demo-window-bar { padding: 14px 18px; border-bottom: 1px solid var(--border-dark); display: flex; align-items: center; gap: 10px; background: #111; }
+.window-dots { display: flex; gap: 6px; }
+.window-dot { width: 10px; height: 10px; border-radius: 50%; }
+.window-dot:nth-child(1) { background: #ff5f57; }
+.window-dot:nth-child(2) { background: #febc2e; }
+.window-dot:nth-child(3) { background: #28c840; }
+.window-title { font-size: 11px; color: var(--muted-dark); margin-left: 8px; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace; }
+.window-status { margin-left: auto; font-size: 10px; color: var(--lime); display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; }
+.window-status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--lime); animation: blink 1.2s infinite; }
+.demo-messages { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-height: 380px; }
+.msg { display: flex; gap: 10px; align-items: flex-start; animation: msgIn 0.3s ease forwards; opacity: 0; }
+.msg.user { flex-direction: row-reverse; }
+.msg-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; font-family: 'Syne', sans-serif; font-weight: 700; }
+.msg.agent .msg-avatar { background: var(--sky); color: #0e0e0e; }
+.msg.user .msg-avatar { background: var(--coral); color: #fff; }
+.msg-bubble { max-width: 75%; padding: 12px 16px; border-radius: 12px; font-size: 12px; line-height: 1.7; font-family: 'JetBrains Mono', monospace; }
+.msg.agent .msg-bubble { background: #1a1a1a; border: 1px solid var(--border-dark); color: var(--text-dark); border-top-left-radius: 2px; }
+.msg.user .msg-bubble { background: var(--coral); color: #fff; border-top-right-radius: 2px; }
+.msg-label { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-dark); margin-bottom: 4px; font-family: 'JetBrains Mono', monospace; }
+.msg.user .msg-label { text-align: right; }
+.typing-indicator { display: flex; gap: 4px; padding: 14px 16px; background: #1a1a1a; border: 1px solid var(--border-dark); border-radius: 12px; border-top-left-radius: 2px; width: fit-content; }
+.typing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted-dark); animation: typingBounce 1.2s ease-in-out infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+.demo-input-bar { padding: 14px 18px; border-top: 1px solid var(--border-dark); display: flex; gap: 10px; background: #111; }
+.demo-input { flex: 1; background: transparent; border: none; color: var(--muted-dark); font-family: 'JetBrains Mono', monospace; font-size: 12px; outline: none; }
+.demo-send { padding: 6px 14px; background: var(--border-dark); border: none; color: var(--muted-dark); font-family: 'JetBrains Mono', monospace; font-size: 11px; cursor: pointer; border-radius: 4px; }
+
+/* ── PRICING ── */
+.pricing-header { text-align: center; margin-bottom: 72px; }
+.pricing-title { font-family: 'Syne', sans-serif; font-size: clamp(44px, 5.5vw, 72px); font-weight: 800; letter-spacing: -0.02em; line-height: 1; margin-bottom: 16px; }
+.pricing-title em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--coral); }
+.pricing-sub { font-size: 13px; color: var(--muted-dark); margin-bottom: 32px; font-family: 'JetBrains Mono', monospace; }
+.billing-toggle { display: inline-flex; border: 1px solid var(--border-dark); border-radius: 40px; overflow: hidden; }
+.toggle-btn { padding: 8px 22px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; background: transparent; border: none; color: var(--muted-dark); cursor: pointer; transition: all 0.2s; }
+.toggle-btn.active { background: var(--text-dark); color: var(--bg); }
+.toggle-save { font-size: 10px; color: var(--lime); margin-left: 4px; }
+.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border-dark); border: 1px solid var(--border-dark); margin-bottom: 40px; }
+.plan { background: var(--surface); padding: 44px 36px; position: relative; transition: background 0.3s; }
+.plan:hover { background: #1c1c1c; }
+.plan.popular { background: var(--text-dark); color: var(--bg); }
+.plan.popular:hover { background: #e8e5de; }
+.plan-badge { position: absolute; top: -1px; left: 50%; transform: translateX(-50%); background: var(--coral); color: #fff; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 5px 18px; }
+.plan-name { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted-dark); margin-bottom: 20px; }
+.plan.popular .plan-name { color: rgba(0,0,0,0.45); }
+.plan-price { font-family: 'Syne', sans-serif; font-size: 56px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin-bottom: 6px; color: var(--text-dark); }
+.plan.popular .plan-price { color: var(--bg); }
+.plan-price sup { font-size: 22px; vertical-align: super; font-weight: 600; }
+.plan-price sub { font-size: 14px; vertical-align: baseline; font-weight: 400; opacity: 0.5; }
+.plan-desc { font-size: 12px; color: var(--muted-dark); margin-bottom: 36px; line-height: 1.7; min-height: 52px; font-family: 'JetBrains Mono', monospace; }
+.plan.popular .plan-desc { color: rgba(0,0,0,0.55); }
+.plan-divider { height: 1px; background: var(--border-dark); margin-bottom: 28px; }
+.plan.popular .plan-divider { background: rgba(0,0,0,0.12); }
+.plan-features { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 36px; }
+.plan-features li { font-size: 12px; display: flex; align-items: flex-start; gap: 10px; color: var(--text-dark); line-height: 1.5; font-family: 'JetBrains Mono', monospace; }
+.plan.popular .plan-features li { color: #1a1a1a; }
+.plan-features .check { color: var(--lime); flex-shrink: 0; font-size: 13px; }
+.plan.popular .plan-features .check { color: #1a9e1a; }
+.plan-features .cross { color: var(--border-dark); flex-shrink: 0; }
+.plan.popular .plan-features li.inactive { opacity: 0.35; }
+.plan-cta { display: block; width: 100%; padding: 14px; text-align: center; font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none; border: 1.5px solid currentColor; color: var(--text-dark); transition: all 0.2s; cursor: pointer; background: transparent; }
+.plan-cta:hover { background: var(--text-dark); color: var(--bg); }
+.plan.popular .plan-cta { background: var(--bg); color: var(--text-dark); border-color: var(--bg); }
+.plan.popular .plan-cta:hover { background: #1a1a1a; }
+.pricing-footer { text-align: center; font-size: 12px; color: var(--muted-dark); display: flex; justify-content: center; gap: 36px; flex-wrap: wrap; font-family: 'JetBrains Mono', monospace; }
+.pricing-footer span { display: flex; align-items: center; gap: 7px; }
+.pricing-footer span::before { content: '✓'; color: var(--lime); }
+
+/* ── CTA ── */
+.cta-section { position: relative; z-index: 1; padding: 160px 48px; text-align: center; overflow: hidden; }
+.cta-bg-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Bebas Neue', sans-serif; font-size: clamp(120px, 18vw, 280px); white-space: nowrap; color: rgba(0,0,0,0.04); pointer-events: none; letter-spacing: -0.02em; }
+.cta-headline { font-family: 'Bebas Neue', sans-serif; font-size: clamp(64px, 8vw, 110px); line-height: 0.95; margin-bottom: 32px; position: relative; }
+.cta-headline em { font-family: 'Fraunces', serif; font-style: italic; color: var(--rust); }
+.cta-sub { font-size: 14px; color: #666; margin-bottom: 48px; position: relative; }
+.cta-form { display: flex; max-width: 480px; margin: 0 auto; position: relative; border: 1.5px solid var(--ink); }
+.cta-input { flex: 1; padding: 16px 20px; font-family: 'DM Mono', monospace; font-size: 13px; background: var(--paper); border: none; outline: none; color: var(--ink); }
+.cta-submit { padding: 16px 28px; background: var(--ink); color: var(--paper); border: none; font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; cursor: none; transition: background 0.2s; }
+.cta-submit:hover { background: var(--rust); }
+
+/* ── FOOTER ── */
+footer { position: relative; z-index: 1; border-top: 1px solid var(--ink); padding: 40px 48px; display: flex; justify-content: space-between; align-items: center; }
+.footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 0.15em; }
+.footer-copy { font-size: 11px; color: var(--ash); font-family: 'DM Mono', monospace; }
+
+/* ── ANIMATIONS ── */
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes typingBounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-6px); opacity: 1; } }
+
+.fade-up { opacity: 0; animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.25s; }
+.delay-3 { animation-delay: 0.4s; }
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-right { display: none; }
+  .use-cases-grid { grid-template-columns: 1fr 1fr; }
+  .steps { grid-template-columns: 1fr 1fr; }
+  .stats-section { grid-template-columns: 1fr 1fr; }
+  nav { padding: 16px 24px; }
+  .section, .dark-section { padding: 80px 24px; }
+  .hero-left { padding: 100px 24px 60px; }
+  .testi-grid { grid-template-columns: 1fr; }
+  .testi-card.featured { grid-row: span 1; }
+  .demo-wrapper { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .testimonials-header { flex-direction: column; gap: 16px; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- ══ NAV ══ -->
+<nav>
+  <a class="nav-logo" href="#">AGENTIC</a>
+  <ul class="nav-links">
+    <li><a href="#use-cases">Use Cases</a></li>
+    <li><a href="#demo">Demo</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#get-started" style="opacity:1; background:var(--ink); color:var(--paper); padding: 8px 16px;">Get Started →</a></li>
+  </ul>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow fade-up">Always on. Always working.</div>
+    <h1 class="hero-headline fade-up delay-1">AI AGENTS<br>THAT <em>never</em><br>SLEEP</h1>
+    <p class="hero-sub fade-up delay-2">Deploy intelligent agents that handle customer support, generate leads, create content, and run research — autonomously, around the clock.</p>
+    <div class="hero-cta fade-up delay-3">
+      <a href="#get-started" class="btn-primary">Deploy Your Agent <span>→</span></a>
+      <a href="#demo" class="btn-ghost">Watch demo ↗</a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="uptime-badge"><span class="uptime-dot"></span>99.9% Uptime</div>
+    <div class="agent-visual">
+      <div class="agent-ring"></div>
+      <div class="agent-ring"></div>
+      <div class="agent-ring"></div>
+      <div class="agent-core">
+        <div class="agent-pulse"></div>
+        <div class="agent-core-label">ACTIVE</div>
+      </div>
+      <div class="agent-tag">Customer Support</div>
+      <div class="agent-tag">Lead Gen</div>
+      <div class="agent-tag">Research</div>
+      <div class="agent-tag">Content</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ TICKER ══ -->
+<div class="ticker">
+  <div class="ticker-track">
+    <div class="ticker-item">Customer Support <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Lead Replies <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Content Creation <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Market Research <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Data Extraction <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Email Outreach <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Social Media <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Sales Qualification <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Customer Support <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Lead Replies <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Content Creation <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Market Research <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Data Extraction <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Email Outreach <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Social Media <span class="ticker-sep">—</span></div>
+    <div class="ticker-item">Sales Qualification <span class="ticker-sep">—</span></div>
+  </div>
+</div>
+
+<!-- ══ STATS ══ -->
+<div class="stats-section">
+  <div class="stat"><div class="stat-num">24<span>/7</span></div><div class="stat-label">Always operational</div></div>
+  <div class="stat"><div class="stat-num">10<span>x</span></div><div class="stat-label">Faster response times</div></div>
+  <div class="stat"><div class="stat-num">80<span>%</span></div><div class="stat-label">Reduction in manual work</div></div>
+  <div class="stat"><div class="stat-num">3<span>min</span></div><div class="stat-label">Setup to deployment</div></div>
+</div>
+
+<!-- ══ USE CASES ══ -->
+<section class="section" id="use-cases">
+  <div class="section-label"><span></span> What agents can do</div>
+  <div class="use-cases-grid">
+    <div class="use-case"><div class="uc-number">01</div><div class="uc-icon">💬</div><div class="uc-title">Customer Support</div><div class="uc-desc">Resolve tickets, handle FAQs, escalate edge cases. Your customers get instant, accurate answers any hour of any day.</div><span class="uc-arrow">↗</span></div>
+    <div class="use-case"><div class="uc-number">02</div><div class="uc-icon">📬</div><div class="uc-title">Lead Replies</div><div class="uc-desc">Respond to inbound leads in seconds, qualify them intelligently, and book meetings — before your competitor even wakes up.</div><span class="uc-arrow">↗</span></div>
+    <div class="use-case"><div class="uc-number">03</div><div class="uc-icon">✍️</div><div class="uc-title">Content Creation</div><div class="uc-desc">Blogs, newsletters, social posts, and ad copy — generated to your brand voice and published on schedule, automatically.</div><span class="uc-arrow">↗</span></div>
+    <div class="use-case"><div class="uc-number">04</div><div class="uc-icon">🔍</div><div class="uc-title">Research & Intel</div><div class="uc-desc">Monitor competitors, extract data from the web, summarize reports, and surface insights before your next meeting.</div><span class="uc-arrow">↗</span></div>
+    <div class="use-case"><div class="uc-number">05</div><div class="uc-icon">📧</div><div class="uc-title">Email Outreach</div><div class="uc-desc">Personalized cold emails at scale. Automated follow-ups. A/B tested copy. Your pipeline fills while you focus elsewhere.</div><span class="uc-arrow">↗</span></div>
+    <div class="use-case"><div class="uc-number">06</div><div class="uc-icon">📊</div><div class="uc-title">Data Operations</div><div class="uc-desc">Scrape, clean, classify, and route data across your stack. No-code automations for complex multi-step workflows.</div><span class="uc-arrow">↗</span></div>
+  </div>
+</section>
+
+<!-- ══ HOW IT WORKS ══ -->
+<section class="how-section">
+  <div class="section-label"><span></span> How it works</div>
+  <h2 class="how-headline">DEPLOY IN<br><em>minutes,</em><br>NOT MONTHS</h2>
+  <div class="steps">
+    <div class="step"><div class="step-num">01</div><div class="step-title">Define the Problem</div><div class="step-desc">Tell us what task you want automated. Customer replies, research, content — describe it in plain language.</div></div>
+    <div class="step"><div class="step-num">02</div><div class="step-title">Configure the Agent</div><div class="step-desc">Set your tone, rules, and escalation paths. Connect to your CRM, inbox, or database via native integrations.</div></div>
+    <div class="step"><div class="step-num">03</div><div class="step-title">Test & Refine</div><div class="step-desc">Run simulated scenarios, review outputs, and dial in the behavior before going live. Full auditability.</div></div>
+    <div class="step"><div class="step-num">04</div><div class="step-title">Go Live & Scale</div><div class="step-desc">Activate your agent. It works around the clock, learns from interactions, and scales with your business.</div></div>
+  </div>
+</section>
+
+<!-- ══ TESTIMONIALS ══ -->
+<section class="dark-section">
+  <div class="tag"><span class="tag-dot"></span> Social proof</div>
+  <div class="testimonials-header">
+    <h2 class="testimonials-title">Real teams.<br><em>Real results.</em></h2>
+    <div class="testimonials-count">800+ companies<br>running agents today</div>
+  </div>
+  <div class="testi-grid">
+    <div class="testi-card featured">
+      <span class="quote-mark">"</span>
+      <p class="testi-text">We replaced our entire overnight support shift with a single Agentic agent. Response time dropped from 6 hours to 38 seconds. Our CSAT went from 3.2 to 4.8 in under 60 days. I genuinely didn't believe it until I saw the data.</p>
+      <div class="testi-metric">↑ 87% CSAT improvement</div>
+      <div class="testi-bottom">
+        <div class="testi-avatar" style="background:#0e0e0e; color:#d4f54e;">SK</div>
+        <div><div class="testi-author">Sarah Kim</div><div class="testi-role">Head of CX, Lumio Commerce</div></div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <span class="quote-mark">"</span>
+      <p class="testi-text">Our lead response agent books more demos at 2am on a Sunday than our best SDR does during business hours. It's unsettling in the best way.</p>
+      <div class="testi-metric" style="color:var(--sky);">3.1x pipeline growth</div>
+      <div class="testi-bottom">
+        <div class="testi-avatar" style="background:#7eb8f7; color:#0e0e0e;">MR</div>
+        <div><div class="testi-author">Marcus Reid</div><div class="testi-role">VP Sales, Folio AI</div></div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <span class="quote-mark">"</span>
+      <p class="testi-text">We publish 40 pieces of content a week across 3 brands. Used to take a team of 6. Now it's 1 editor reviewing what the agent drafts overnight.</p>
+      <div class="testi-metric" style="color:var(--coral);">40 posts/week, 1 editor</div>
+      <div class="testi-bottom">
+        <div class="testi-avatar" style="background:#ff5f3f; color:#fff;">JP</div>
+        <div><div class="testi-author">Jess Park</div><div class="testi-role">Content Director, Relay Media</div></div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <span class="quote-mark">"</span>
+      <p class="testi-text">Setup took 11 minutes. I timed it. The research agent now saves my analysts 14 hours a week each. The ROI conversation with our CFO was very short.</p>
+      <div class="testi-metric" style="color:var(--lime);">14 hrs saved/analyst/wk</div>
+      <div class="testi-bottom">
+        <div class="testi-avatar" style="background:#333; color:var(--lime);">DW</div>
+        <div><div class="testi-author">David Walsh</div><div class="testi-role">COO, Strata Capital</div></div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <span class="quote-mark">"</span>
+      <p class="testi-text">Tried 4 other AI tools. Agentic is the only one that connects to our CRM, writes like a human, and doesn't hallucinate our pricing.</p>
+      <div class="testi-metric" style="color:var(--sky);">Zero prompt rewrites needed</div>
+      <div class="testi-bottom">
+        <div class="testi-avatar" style="background:#444; color:#fff;">TL</div>
+        <div><div class="testi-author">Tara Lin</div><div class="testi-role">RevOps Lead, Kindred SaaS</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ INTERACTIVE DEMO ══ -->
+<section class="dark-section" id="demo" style="background:#111;">
+  <div class="tag"><span class="tag-dot"></span> Live demo</div>
+  <div class="demo-wrapper">
+    <div class="demo-controls">
+      <h2>See an agent<br><em>in action</em></h2>
+      <p>Pick an agent type and watch it handle a real scenario — no setup, no signup.</p>
+      <div class="agent-selector">
+        <button class="agent-btn active" onclick="selectAgent(this,'support')">
+          <span class="agent-btn-icon">💬</span>
+          <div><div class="agent-btn-label">Customer Support</div><span class="agent-btn-desc">Handles complaints, FAQs, returns</span></div>
+        </button>
+        <button class="agent-btn" onclick="selectAgent(this,'lead')">
+          <span class="agent-btn-icon">📬</span>
+          <div><div class="agent-btn-label">Lead Reply Agent</div><span class="agent-btn-desc">Qualifies & books demos instantly</span></div>
+        </button>
+        <button class="agent-btn" onclick="selectAgent(this,'research')">
+          <span class="agent-btn-icon">🔍</span>
+          <div><div class="agent-btn-label">Research Agent</div><span class="agent-btn-desc">Summarizes intel, monitors competitors</span></div>
+        </button>
+        <button class="agent-btn" onclick="selectAgent(this,'content')">
+          <span class="agent-btn-icon">✍️</span>
+          <div><div class="agent-btn-label">Content Agent</div><span class="agent-btn-desc">Drafts posts, emails, copy on demand</span></div>
+        </button>
+      </div>
+      <button class="demo-run-btn" id="runBtn" onclick="runDemo()">▶ Run Demo Scenario</button>
+    </div>
+    <div class="demo-window">
+      <div class="demo-window-bar">
+        <div class="window-dots"><div class="window-dot"></div><div class="window-dot"></div><div class="window-dot"></div></div>
+        <span class="window-title" id="windowTitle">SUPPORT AGENT — LIVE</span>
+        <span class="window-status">Agent Online</span>
+      </div>
+      <div class="demo-messages" id="demoMessages">
+        <div class="msg agent" style="opacity:1">
+          <div class="msg-avatar">A</div>
+          <div><div class="msg-label">Agent</div><div class="msg-bubble">Hi! I'm your AI agent. Click "Run Demo" to watch me handle a real scenario.</div></div>
+        </div>
+      </div>
+      <div class="demo-input-bar">
+        <input class="demo-input" placeholder="Type a message or run the demo above…" readonly>
+        <button class="demo-send">Send</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ PRICING ══ -->
+<section class="dark-section" id="pricing">
+  <div class="pricing-header">
+    <div class="tag" style="justify-content:center;"><span class="tag-dot"></span> Pricing</div>
+    <h2 class="pricing-title">Simple pricing.<br><em>Serious results.</em></h2>
+    <p class="pricing-sub">No per-seat nonsense. Pay for what your agents actually do.</p>
+    <div class="billing-toggle">
+      <button class="toggle-btn active" id="monthlyBtn" onclick="setBilling('monthly')">Monthly</button>
+      <button class="toggle-btn" id="annualBtn" onclick="setBilling('annual')">Annual <span class="toggle-save">save 25%</span></button>
+    </div>
+  </div>
+  <div class="pricing-grid">
+    <div class="plan">
+      <div class="plan-name">Starter</div>
+      <div class="plan-price" id="price-starter"><sup>$</sup>49<sub>/mo</sub></div>
+      <p class="plan-desc">One focused agent. Perfect for solos and small teams testing automation.</p>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> 1 active agent</li>
+        <li><span class="check">✓</span> 5,000 actions/month</li>
+        <li><span class="check">✓</span> 3 integrations (CRM, email, Slack)</li>
+        <li><span class="check">✓</span> Standard response speed</li>
+        <li><span class="check">✓</span> Email support</li>
+        <li class="inactive"><span class="cross">—</span> Custom agent training</li>
+        <li class="inactive"><span class="cross">—</span> Multi-agent workflows</li>
+        <li class="inactive"><span class="cross">—</span> Analytics dashboard</li>
+      </ul>
+      <a href="#" class="plan-cta">Get Started</a>
+    </div>
+    <div class="plan popular">
+      <div class="plan-badge">Most Popular</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price" id="price-pro"><sup>$</sup>149<sub>/mo</sub></div>
+      <p class="plan-desc">Multiple agents, full integrations, and priority speed. Built for growing teams.</p>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> 5 active agents</li>
+        <li><span class="check">✓</span> 50,000 actions/month</li>
+        <li><span class="check">✓</span> Unlimited integrations</li>
+        <li><span class="check">✓</span> Priority response speed</li>
+        <li><span class="check">✓</span> Analytics dashboard</li>
+        <li><span class="check">✓</span> Custom agent training</li>
+        <li><span class="check">✓</span> Slack + priority support</li>
+        <li class="inactive"><span class="cross">—</span> Multi-agent workflows</li>
+      </ul>
+      <a href="#" class="plan-cta">Get Started</a>
+    </div>
+    <div class="plan">
+      <div class="plan-name">Scale</div>
+      <div class="plan-price" id="price-scale"><sup>$</sup>399<sub>/mo</sub></div>
+      <p class="plan-desc">Unlimited agents, multi-agent orchestration, and a dedicated success manager.</p>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> Unlimited agents</li>
+        <li><span class="check">✓</span> Unlimited actions</li>
+        <li><span class="check">✓</span> Unlimited integrations</li>
+        <li><span class="check">✓</span> Fastest response speed</li>
+        <li><span class="check">✓</span> Multi-agent workflows</li>
+        <li><span class="check">✓</span> Custom agent training</li>
+        <li><span class="check">✓</span> Dedicated success manager</li>
+        <li><span class="check">✓</span> SLA guarantee + audit logs</li>
+      </ul>
+      <a href="#" class="plan-cta">Talk to Sales</a>
+    </div>
+  </div>
+  <div class="pricing-footer">
+    <span>14-day free trial</span>
+    <span>No credit card required</span>
+    <span>Cancel anytime</span>
+    <span>SOC 2 compliant</span>
+  </div>
+</section>
+
+<!-- ══ CTA ══ -->
+<section class="cta-section" id="get-started">
+  <div class="cta-bg-text">24/7</div>
+  <h2 class="cta-headline">YOUR BUSINESS<br><em>never closes</em></h2>
+  <p class="cta-sub">Join 800+ companies running AI agents that work while their teams sleep.</p>
+  <div class="cta-form">
+    <input class="cta-input" type="email" placeholder="your@email.com">
+    <button class="cta-submit">Get Early Access</button>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div class="footer-logo">AGENTIC</div>
+  <div class="footer-copy">© 2026 — Built for the always-on economy</div>
+</footer>
+
+<script>
+// ── CURSOR ──────────────────────────────────────────
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx - 6 + 'px';
+  cursor.style.top = my - 6 + 'px';
+});
+(function animRing() {
+  rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
+  ring.style.left = rx - 18 + 'px'; ring.style.top = ry - 18 + 'px';
+  requestAnimationFrame(animRing);
+})();
+document.querySelectorAll('a, button, .use-case, .testi-card, .plan').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursor.style.transform = 'scale(2.5)'; ring.style.transform = 'scale(1.5)'; });
+  el.addEventListener('mouseleave', () => { cursor.style.transform = 'scale(1)'; ring.style.transform = 'scale(1)'; });
+});
+
+// ── SCROLL REVEAL ────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'translateY(0)'; }
+  });
+}, { threshold: 0.08 });
+document.querySelectorAll('.use-case, .step, .stat, .testi-card, .plan').forEach(el => {
+  el.style.opacity = '0'; el.style.transform = 'translateY(24px)';
+  el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+  observer.observe(el);
+});
+
+// ── DEMO ─────────────────────────────────────────────
+const scenarios = {
+  support: {
+    title: 'SUPPORT AGENT — LIVE',
+    messages: [
+      { role: 'user', text: "Hi, I ordered 3 days ago and my package still hasn't arrived. Order #58291. Pretty frustrated honestly." },
+      { role: 'agent', text: "Hi there! I completely understand — waiting is frustrating, especially when you're not sure what's happening. Let me pull up order #58291 right now." },
+      { role: 'agent', text: "Got it. Your order shipped on the 13th via FedEx (tracking: FX9284710). There's a delay at the Chicago sorting facility affecting your area — updated ETA is tomorrow by 8pm. I've flagged it as priority." },
+      { role: 'user', text: "That's still pretty annoying. Can I get some kind of compensation?" },
+      { role: 'agent', text: "Absolutely — that's fair. I've applied a 15% credit to your account valid for 60 days. No need to do anything, it'll apply automatically at checkout. Is there anything else I can help with?" },
+      { role: 'user', text: "Okay, that actually helps. Thank you." },
+      { role: 'agent', text: "Of course! Sorry again for the delay. Your package is on its way and the credit's locked in. Have a great rest of your day! 👋" },
+    ]
+  },
+  lead: {
+    title: 'LEAD REPLY AGENT — LIVE',
+    messages: [
+      { role: 'user', text: "Hey, saw your product on LinkedIn. We're a 200-person SaaS company and we're drowning in inbound support. What do you do exactly?" },
+      { role: 'agent', text: "Great timing — that's exactly what we fix. We deploy AI agents that handle customer support, lead routing, and follow-ups 24/7, without adding headcount. Companies your size typically cut response times by 80%+ in week one." },
+      { role: 'user', text: "Interesting. How long does setup take and what does it cost?" },
+      { role: 'agent', text: "Most teams are live in under 30 minutes. Pricing starts at $149/mo for your team size. I'd love to show you a live demo — it's 20 minutes and you'll see the agent handling real scenarios. Are you free Thursday or Friday this week?" },
+      { role: 'user', text: "Thursday at 2pm works." },
+      { role: 'agent', text: "Perfect. I've sent a calendar invite to your email with a Zoom link. I'll also include a pre-read doc so we can skip the basics and get straight to your specific use case. See you Thursday at 2pm! 🗓️" },
+    ]
+  },
+  research: {
+    title: 'RESEARCH AGENT — LIVE',
+    messages: [
+      { role: 'user', text: "Give me a quick competitive intel summary on Intercom vs Zendesk — I have a board meeting in an hour." },
+      { role: 'agent', text: "On it. Pulling recent data on both... ⚡" },
+      { role: 'agent', text: "**Intercom** (last 30 days): Launched 'Fin AI Copilot' for agents. Pricing raised ~12%. Community sentiment mixed — praised for UI, criticized for stability at scale. G2 score: 4.4." },
+      { role: 'agent', text: "**Zendesk** (last 30 days): New AI-powered triage in beta. Acquired Klaus integration now live. Enterprise-heavy, slower to iterate. G2 score: 4.3. Lost 3 mid-market deals to Freshdesk this month per review signals." },
+      { role: 'agent', text: "**Key insight:** Both are moving upmarket. The mid-market gap ($50–500 seats) is underserved and where fastest-growing competitors are winning. Want me to format this as a slide or email draft?" },
+    ]
+  },
+  content: {
+    title: 'CONTENT AGENT — LIVE',
+    messages: [
+      { role: 'user', text: "Write me a LinkedIn post about why AI agents are better than chatbots. Keep it punchy, under 150 words." },
+      { role: 'agent', text: "Here's a draft:\n\nChatbots answer questions.\nAI agents take action.\n\nA chatbot tells you your order is delayed. An agent detects the delay, contacts the carrier, updates your CRM, emails the customer, and flags ops — before you even knew there was a problem.\n\nThe difference isn't intelligence. It's autonomy.\n\nChatbots wait to be asked. Agents work while you sleep." },
+      { role: 'user', text: "Love it. Give me a punchier opening line." },
+      { role: 'agent', text: "Try: **\"Chatbots talk. Agents work.\"** — or — **\"Your chatbot answers questions. Mine closes tickets, books meetings, and updates your CRM. At 3am.\"**" },
+    ]
+  }
+};
+
+let currentAgent = 'support', isRunning = false;
+
+function selectAgent(btn, agent) {
+  document.querySelectorAll('.agent-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentAgent = agent;
+  resetDemo();
+}
+
+function resetDemo() {
+  document.getElementById('demoMessages').innerHTML = `
+    <div class="msg agent" style="opacity:1">
+      <div class="msg-avatar">A</div>
+      <div><div class="msg-label">Agent</div><div class="msg-bubble">Agent selected. Click "Run Demo" to watch a live scenario play out.</div></div>
+    </div>`;
+  const btn = document.getElementById('runBtn');
+  btn.disabled = false; btn.textContent = '▶ Run Demo Scenario';
+  btn.onclick = runDemo;
+}
+
+async function runDemo() {
+  if (isRunning) return;
+  isRunning = true;
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true; btn.textContent = '● Running…';
+  const scenario = scenarios[currentAgent];
+  document.getElementById('windowTitle').textContent = scenario.title;
+  const msgs = document.getElementById('demoMessages');
+  msgs.innerHTML = '';
+  for (const msg of scenario.messages) {
+    if (msg.role === 'agent') {
+      const t = document.createElement('div');
+      t.className = 'msg agent'; t.style.opacity = '1';
+      t.innerHTML = `<div class="msg-avatar">A</div><div><div class="msg-label">Agent</div><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+      msgs.appendChild(t); msgs.scrollTop = msgs.scrollHeight;
+      await delay(900 + msg.text.length * 5);
+      t.remove();
+    } else { await delay(400); }
+    const el = document.createElement('div');
+    el.className = `msg ${msg.role}`;
+    const label = msg.role === 'agent' ? 'Agent' : 'Customer';
+    el.innerHTML = `<div class="msg-avatar">${msg.role === 'agent' ? 'A' : 'U'}</div><div><div class="msg-label">${label}</div><div class="msg-bubble">${msg.text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div></div>`;
+    msgs.appendChild(el); msgs.scrollTop = msgs.scrollHeight;
+    await delay(msg.role === 'user' ? 700 : 300);
+  }
+  btn.textContent = '↺ Run Again'; btn.disabled = false;
+  btn.onclick = () => { resetDemo(); setTimeout(runDemo, 100); };
+  isRunning = false;
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── BILLING TOGGLE ────────────────────────────────────
+const prices = { monthly: { starter:49, pro:149, scale:399 }, annual: { starter:37, pro:112, scale:299 } };
+function setBilling(mode) {
+  document.getElementById('monthlyBtn').classList.toggle('active', mode==='monthly');
+  document.getElementById('annualBtn').classList.toggle('active', mode==='annual');
+  const p = prices[mode];
+  document.getElementById('price-starter').innerHTML = `<sup>$</sup>${p.starter}<sub>/mo</sub>`;
+  document.getElementById('price-pro').innerHTML = `<sup>$</sup>${p.pro}<sub>/mo</sub>`;
+  document.getElementById('price-scale').innerHTML = `<sup>$</sup>${p.scale}<sub>/mo</sub>`;
+}
+</script>
+</body>
+</html>
